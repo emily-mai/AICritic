@@ -2,6 +2,7 @@ import pandas as pd
 import tensorflow as tf
 import tensorflow_hub as hub
 import asyncio
+from sklearn.model_selection import train_test_split as tts
 tf.executing_eagerly()
 
 module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
@@ -60,3 +61,6 @@ if __name__ == '__main__':
     data_raw = load_data()
     print(data_raw.head)
     embeddings = embed_text_parallel(data_raw, 'plot_synopsis', load_only=True)
+    y = data_raw['weighted_average_vote']
+    X_train, X_test, y_train, y_test = tts(embeddings, y, test_size=0.2, random_state=0)
+    print(len(X_train), len(y_train), len(X_test), len(y_test))

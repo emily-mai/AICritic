@@ -6,8 +6,6 @@ import model
 from sklearn.model_selection import train_test_split as tts
 from keras.callbacks import ModelCheckpoint
 
-# tf.executing_eagerly()
-
 
 def load_data():
     plots_raw = pd.read_csv('data/all_data.csv')
@@ -17,7 +15,6 @@ def load_data():
     ratings_raw = ratings_raw[['imdb_title_id', 'weighted_average_vote']]
     ratings_raw = ratings_raw.set_index('imdb_title_id')
     raw = plots_raw.join(ratings_raw).dropna()
-    # print(data_raw.head())
     return raw
 
 
@@ -63,7 +60,7 @@ def partition_data(embeddings, data_raw):
     embeddings = embeddings.drop(embeddings.iloc[:, 0:1], axis=1)
     embeddings['imdb_id'] = data_raw.index
     y = data_raw['weighted_average_vote']
-    X_train, X_test, y_train, y_test = tts(embeddings, y, test_size=0.2, random_state=0)
+    X_train, X_test, y_train, y_test = tts(embeddings, y, test_size=0.1, random_state=0)
     output = pd.DataFrame()
     output['imdb_id'] = X_test['imdb_id'].reset_index(drop=True)
     X_train = X_train.drop(columns=['imdb_id'])
@@ -85,8 +82,8 @@ if __name__ == '__main__':
     callbacks_list = [checkpoint]
 
     # train the model
-    NN_model = model.model(input_dim=len(X_train.columns))
-    # NN_model.fit(X_train, y_train, epochs=100, batch_size=32, validation_split=0.1, callbacks=callbacks_list)
+    NN_model = model.model_cnn(input_dim=len(X_train.columns))
+    NN_model.fit(X_train, y_train, epochs=50, batch_size=64, validation_split=0.1, callbacks=callbacks_list)
 
     # load weights of best model
     weights_file = 'weights.hdf5'  # choose the best checkpoint

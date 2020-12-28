@@ -18,7 +18,12 @@ app.layout = html.Div(
 
 
 if __name__ == "__main__":
-    # application.run(debug=True, host="0.0.0.0", port="80")
+    # Run on docker
+    application.run(host="0.0.0.0", port=80, debug=True)
+
+    # Run locally
+    # app.run_server(port=port, debug=True)
+
     text = '''
     Diana Prince lives quietly among mortals in the vibrant, sleek 1980s -- an era of excess driven by the pursuit of having it all. Though she's come into her full powers, she maintains a low profile by curating ancient artifacts, and only performing heroic acts incognito. But soon, Diana will have to muster all of her strength, wisdom and courage as she finds herself squaring off against Maxwell Lord and the Cheetah, a villainess who possesses superhuman strength and agility.
     '''

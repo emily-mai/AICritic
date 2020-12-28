@@ -1,12 +1,12 @@
 import pandas as pd
-import tensorflow as tf
+import numpy as np
 import tensorflow_hub as hub
 import asyncio
 import model
 from sklearn.model_selection import train_test_split as tts
 from keras.callbacks import ModelCheckpoint
 
-tf.executing_eagerly()
+# tf.executing_eagerly()
 
 
 def load_data():
@@ -22,7 +22,7 @@ def load_data():
 
 
 def background(f):
-    def wrapped(*args, **kwargs):
+    def wrapped(*args):
         return asyncio.get_event_loop().run_in_executor(None, f, *args)
     return wrapped
 
@@ -59,29 +59,32 @@ def embed_text_parallel(data, column, load_only):
     return dataframe
 
 
+def partition_data(embeddings, data_raw):
+    embeddings = embeddings.drop(embeddings.iloc[:, 0:1], axis=1)
+    embeddings['imdb_id'] = data_raw.index
+    y = data_raw['weighted_average_vote']
+    X_train, X_test, y_train, y_test = tts(embeddings, y, test_size=0.2, random_state=0)
+    output = pd.DataFrame()
+    output['imdb_id'] = X_test['imdb_id'].reset_index(drop=True)
+    X_train = X_train.drop(columns=['imdb_id'])
+    X_test = X_test.drop(columns=['imdb_id'])
+    return X_train, X_test, y_train, y_test, output
+
+
 if __name__ == '__main__':
     # data loading and preprocessing
     data_raw = load_data()
     print(data_raw.head)
     # embeddings = embed_text_parallel(data_raw, 'plot_synopsis', load_only=True)
-    embeddings = pd.read_csv('data/embeddings_all.csv')
-    embeddings = embeddings.drop(embeddings.iloc[:, 0:1], axis=1)
-    embeddings['imdb_id'] = data_raw.index
-    y = data_raw['weighted_average_vote']
-    X_train, X_test, y_train, y_test = tts(embeddings, y, test_size=0.2, random_state=0)
-    X_test_ids = X_test['imdb_id'].reset_index()
-    X_train = X_train.drop(columns=['imdb_id'])
-    X_test = X_test.drop(columns=['imdb_id'])
-    print(len(X_train), len(y_train), len(X_test), len(y_test))
-    print(X_train)
-    print(X_test)
+    X = pd.read_csv('data/embeddings_all.csv')
+    X_train, X_test, y_train, y_test, output = partition_data(X, data_raw)
 
-    # # save checkpoints
-    # checkpoint_name = 'weights.hdf5'
-    # checkpoint = ModelCheckpoint(checkpoint_name, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
-    # callbacks_list = [checkpoint]
-    #
-    # # train the model
+    # save checkpoints
+    checkpoint_name = 'weights.hdf5'
+    checkpoint = ModelCheckpoint(checkpoint_name, monitor='val_loss', verbose=1, save_best_only=True, mode='auto')
+    callbacks_list = [checkpoint]
+
+    # train the model
     NN_model = model.model(input_dim=len(X_train.columns))
     # NN_model.fit(X_train, y_train, epochs=100, batch_size=32, validation_split=0.1, callbacks=callbacks_list)
 
@@ -91,7 +94,8 @@ if __name__ == '__main__':
     NN_model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mean_absolute_error'])
 
     # test the model
-    predictions = NN_model.predict(X_test)
-    X_test_ids['prediction'] = predictions
-    error = model.error(predictions, y_test)
+    output['prediction'] = NN_model.predict(X_test)
+    output['y_test'] = np.asarray(y_test).reshape(-1, 1)
+    output['error'] = (output['y_test'].subtract(output['prediction'])).abs()
+    error = model.error(output['prediction'], output['y_test'])
     print("mean absolute error: {}".format(error))

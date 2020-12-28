@@ -101,6 +101,9 @@ def evaluate_model(embed=False, fit=False):
     output['y_test'] = np.asarray(y_test).reshape(-1, 1)
     output['error'] = (output['y_test'].subtract(output['prediction'])).abs()
     MAE = mean_absolute_error(output['y_test'], output['prediction'])
+    output = output[output['error'] < 2]
+    error_no_outlier = output['error'].mean()
+    print("mean absolute error without outliers: {}".format(error_no_outlier))
     print("mean absolute error: {}".format(MAE))
 
 

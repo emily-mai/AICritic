@@ -10,6 +10,11 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split as tts
 
 
+module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
+encoder_model = hub.load(module_url)
+print("module %s loaded" % module_url)
+
+
 def load_data():
     plots_raw = pd.read_csv('data/all_data.csv')
     ratings_raw = pd.read_csv('data/IMDb ratings.csv')
@@ -28,7 +33,7 @@ def background(f):
 
 
 @background
-def embed_text(data, column, pair, encoder_model):
+def embed_text_data(data, column, pair):
     messages = data[column].values[pair[0]:pair[1]]
     embeddings = encoder_model(messages)
     embeddings_df = pd.DataFrame(embeddings.numpy())
@@ -38,15 +43,12 @@ def embed_text(data, column, pair, encoder_model):
 
 
 def embed_text_parallel(data, column, load_only):
-    module_url = "https://tfhub.dev/google/universal-sentence-encoder/4"
-    encoder_model = hub.load(module_url)
-    print("module %s loaded" % module_url)
     # Embed text data with universal sentence encoder
     indices = [(0, 1000), (1000, 2000), (2000, 3000), (3000, 4000), (4000, 5000), (5000, 6000),
                (6000, 7000), (7000, 8000), (8000, 9000), (9000, 10000), (10000, 11707)]
     if not load_only:
         for pair in indices:
-            embed_text(data, column, pair, encoder_model)
+            embed_text_data(data, column, pair)
         print("loop finished")
 
     dataframe = pd.DataFrame()
@@ -148,3 +150,11 @@ def model_cnn(input_dim, vocab_size=5000):
     model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mean_absolute_error'])
     model.summary()
     return model
+
+
+def predict_plot_rating(text):
+    embedding = encoder_model([text]).numpy()
+    model = model_nn(input_dim=embedding.shape[1])
+    model.load_weights("weights.hdf5")
+    prediction = model.predict(embedding)[0][0]
+    return prediction

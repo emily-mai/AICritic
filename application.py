@@ -12,9 +12,24 @@ app.config["suppress_callback_exceptions"] = True
 
 
 app.layout = html.Div(
-    "hello world"
+    [
+        dbc.Textarea(className="mb-3", bs_size="lg", placeholder="Please enter a description...", id="text-input"),
+        dbc.Button("Predict Rating", id="submit-button", className="btn btn-primary btn-lg btn-block")
+    ]
 )
 
 
+@app.callback(
+    Output("rating-output", "children"),
+    [Input("submit-button", "n_clicks")],
+    [State("text-input", "value")]
+)
+def predict_rating(n_clicks, text):
+    if n_clicks is None:
+        return "Not clicked."
+    else:
+        return f"Clicked {n_clicks} times."
+
+
 if __name__ == "__main__":
-    application.run(debug=True, host="0.0.0.0", port="80")
+    application.run(debug=True)

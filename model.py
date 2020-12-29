@@ -3,9 +3,9 @@ import numpy as np
 import tensorflow_hub as hub
 import asyncio
 from keras.callbacks import ModelCheckpoint
-from keras.models import Sequential
+from keras.models import Sequential, Model, Input
 from keras.layers import Dense, Embedding, Flatten, Dropout
-from keras.layers import Conv1D, MaxPooling1D
+from keras.layers import Conv1D, MaxPooling1D, GlobalMaxPooling1D
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split as tts
 
@@ -89,7 +89,7 @@ def evaluate_model(embed=False, fit=False):
     callbacks_list = [checkpoint]
 
     # train the model
-    NN_model = model_nn(input_dim=len(X_train.columns))
+    NN_model = model_cnn(input_dim=len(X_train.columns))
     if fit:
         NN_model.fit(X_train, y_train, epochs=50, batch_size=64, validation_split=0.1, callbacks=callbacks_list)
 
@@ -134,19 +134,35 @@ def model_nn(input_dim):
 
 
 def model_cnn(input_dim, vocab_size=5000):
-    model = Sequential()
-    model.add(Embedding(vocab_size, input_dim, input_length=input_dim))
-    model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
-    model.add(Conv1D(filters=16, kernel_size=3, padding='same', activation='relu'))
-    model.add(Conv1D(filters=64, kernel_size=3, padding='same', activation='relu'))
-    model.add(MaxPooling1D())
-    model.add(Flatten())
-    model.add(Dense(250, activation='relu'))
+    # model = Sequential()
+    # model.add(Embedding(vocab_size, input_dim, input_length=input_dim))
+    # model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu'))
+    # model.add(Conv1D(filters=16, kernel_size=3, padding='same', activation='relu'))
+    # model.add(Conv1D(filters=64, kernel_size=3, padding='same', activation='relu'))
+    # model.add(MaxPooling1D())
+    # model.add(Flatten())
+    # model.add(Dense(250, activation='relu'))
+    #
+    # # The Output Layer :
+    # model.add(Dense(1, kernel_initializer='normal', activation='linear'))
+    #
+    # # Compile the network :
+    # model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mean_absolute_error'])
+    # model.summary()
 
-    # The Output Layer :
-    model.add(Dense(1, kernel_initializer='normal', activation='linear'))
-
-    # Compile the network :
+    int_sequences_input = Input(shape=(None,), dtype="int64")
+    embedding_layer = Embedding(vocab_size, input_dim, trainable=False, input_length=input_dim)
+    embedded_sequences = embedding_layer(int_sequences_input)
+    x = Conv1D(128, 5, activation="relu")(embedded_sequences)
+    x = MaxPooling1D(5)(x)
+    x = Conv1D(128, 5, activation="relu")(x)
+    x = MaxPooling1D(5)(x)
+    x = Conv1D(128, 5, activation="relu")(x)
+    x = GlobalMaxPooling1D()(x)
+    x = Dense(128, activation="relu")(x)
+    x = Dropout(0.5)(x)
+    preds = Dense(1, kernel_initializer='normal', activation="linear")(x)
+    model = Model(int_sequences_input, preds)
     model.compile(loss='mean_absolute_error', optimizer='adam', metrics=['mean_absolute_error'])
     model.summary()
     return model

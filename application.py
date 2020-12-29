@@ -65,8 +65,8 @@ def predict_rating(n_clicks, text):
 
 if __name__ == "__main__":
     # Run on docker
-    # application.run(host="0.0.0.0", port=80, debug=True)
+    application.run(host="0.0.0.0", port=80, debug=True)
 
     # Run locally
-    app.run_server(debug=True)
+    # app.run_server(debug=True)
 
